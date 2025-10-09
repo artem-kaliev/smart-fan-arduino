@@ -95,26 +95,35 @@ void loop() {
   }
 }
 
+// ФУНКЦИЯ ОБНОВЛЕНИЯ ДИСПЛЕЯ
 void updateDisplay(float temperature, bool fanState) {
-  // Столбец 0, строка 0, очистка строки
-  lcd.setCursor(0, 0);
-  lcd.print("                ");
+  static float lastTemp = -100;
+  static bool lastFan = false;
+  static bool firstRun = true;
 
-  // Столбец 0, строка 0, ввод температуры
-  lcd.setCursor(0, 0);
-  lcd.print("Temp: ");
-  lcd.print(temperature, 1);
-  lcd.print("C");
-  lcd.print((char)223);
+  if (firstRun) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Temp: ");
+    lcd.setCursor(0, 1);
+    lcd.print("Fan:  ");
+    firstRun = false;
+  }
 
-  // Столбец 0, строка 1, очистка строки
-  lcd.setCursor(0, 1);
-  lcd.print("                ");
+  if (temperature != lastTemp) {
+    lcd.setCursor(6, 0);
+    lcd.print(temperature, 1);
+    lcd.print("C");
+    lcd.print((char)223);
+    lcd.print("    ");
+    lastTemp = temperature;
+  }
 
-  // Столбец 0, строка 1, ввод состояния вентилятора
-  lcd.setCursor(0, 1);
-  lcd.print("Fan: ");
-  lcd.print(fanState ? "ON " : "OFF");
+  if (fanState != lastFan) {
+    lcd.setCursor(6, 1);
+    lcd.print(fanState ? "ON " : "OFF");
+    lastFan = fanState;
+  }
 }
 
 // ===== ФУНКЦИЯ УПРАВЛЕНИЯ ВЕНТИЛЯТОРОМ =====
