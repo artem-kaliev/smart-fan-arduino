@@ -1,46 +1,17 @@
+// ===== БАЗОВЫЕ НАСТРОЙКИ =====
+#include "config.h"
+
 // ===== БИБЛИОТЕКИ =====
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <LiquidCrystal_I2C.h>
 
-// ===== КОНСТАНТЫ И НАСТРОЙКИ =====
-#define ONE_WIRE_BUS 2  // Датчик температуры DS18B20
+// Настройка датчика
+#define ONE_WIRE_BUS 2  // Пин DATA датчика
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
-const int FAN_PIN = 3;        // Вентилятор (через транзистор)
-const int LED_PIN_RED = 7;    // Индикатор работы
-const int LED_PIN_GREEN = 8;  // Индикатор работы
 
-// Создаем объект дисплея (адрес, столбцов, строк)
-LiquidCrystal_I2C lcd(0x27, 16, 2);  // Адрес обычно 0x27 или 0x3F
-
-// Температурные пороги (в °C)
-const float TEMP_THRESHOLD_ON = 30.0;   // Включение вентилятора
-const float TEMP_THRESHOLD_OFF = 28.0;  // Выключение вентилятора (гистерезис)
-const float TEMP_MAX_REASONABLE = 80.0; // Максимум для помещения
-const float TEMP_MIN_REASONABLE = -10.0;// Минимум для помещения
-
-// Интервалы времени (в миллисекундах)
-const unsigned long TEMP_READ_INTERVAL = 1000;  // Основное измерение температуры
-const unsigned long SAMPLE_DELAY = 200;         // Задержка между усреднениями
-const int DISPLAY_UPDATE_INTERVAL = 1000;       // Обновлять дисплей каждые 1000ms
-
-// ===== ПЕРЕМЕННЫЕ ДЛЯ ТАЙМЕРОВ =====
-unsigned long previousTempReadTime = 0;  // Время последнего измерения температуры
-unsigned long previousSampleTime = 0;    // Время последнего усреднения
-unsigned long lastDisplayUpdate = 0;     // Время последнего вывода в дисплей
-
-// ===== ПЕРЕМЕННЫЕ ДЛЯ ИЗМЕРЕНИЙ =====
-float smoothedTemperature = 0;  // Сглаженное значение температуры
-bool fanState = false;          // Текущее состояние вентилятора
-int sampleCount = 0;            // Счетчик измерений для усреднения
-float tempSum = 0;              // Сумма температур для усреднения
-
-// Проверка на сбои датчика
-bool sensorError = false;
-int sensorErrorCount = 0;
-const int MAX_SENSOR_ERRORS = 10; // Число ошибок, после которого прерывается система
-const int BLINK_INTERVAL = 500;
+LiquidCrystal_I2C lcd(DISPLAY_ADDRESS, DISPLAY_COLUMNS, DISPLAY_ROWS); // Создаем объект дисплея
 
 // ===== НАСТРОЙКА =====
 void setup() {
