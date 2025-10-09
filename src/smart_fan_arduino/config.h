@@ -10,8 +10,6 @@ const int LED_PIN_GREEN = 8;  // Индикатор работы
 // ===== Температурные пороги (в °C) =====
 const float TEMP_THRESHOLD_ON = 30.0;   // Включение вентилятора
 const float TEMP_THRESHOLD_OFF = 28.0;  // Выключение вентилятора (гистерезис)
-const float TEMP_MAX_REASONABLE = 80.0; // Максимум для помещения
-const float TEMP_MIN_REASONABLE = -10.0;// Минимум для помещения
 
 // ===== Интервалы времени (в миллисекундах) =====
 const unsigned long TEMP_READ_INTERVAL = 1000;  // Основное измерение температуры
@@ -35,7 +33,17 @@ const int DISPLAY_ADDRESS = 0x27; // Адрес обычно 0x27 или 0x3F
 const int DISPLAY_COLUMNS = 16;   // Максимальный размер столбцов дисплея
 const int DISPLAY_ROWS = 2;       // Максимальный размер строк дисплея
 
-// ===== ПРОВЕРКА НА СБОИ ДАТЧИКА =====
-bool sensorError = false;
+// ===== РАСШИРЕННЫЕ НАСТРОЙКИ =====
+// Раскомментируйте нужные строки:
+
+// #define ENABLE_TEMPERATURE_VALIDATION  // Проверка на сбои датчика
+
+#ifdef ENABLE_TEMPERATURE_VALIDATION
+
+// ===== ПЕРЕМЕННЫЕ ДЛЯ ПРОВЕРКИ НА СБОИ ДАТЧИКА
 int sensorErrorCount = 0;
-const int MAX_SENSOR_ERRORS = 10; // Число ошибок, после которого прерывается система
+const float TEMP_MAX_REASONABLE = 80.0; // Максимум для помещения
+const float TEMP_MIN_REASONABLE = -10.0;// Минимум для помещения
+const int MAX_SENSOR_ERRORS = 10;       // Максимально допустимое число ошибок
+
+#endif

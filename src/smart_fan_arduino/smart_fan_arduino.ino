@@ -11,7 +11,7 @@
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
-LiquidCrystal_I2C lcd(DISPLAY_ADDRESS, DISPLAY_COLUMNS, DISPLAY_ROWS); // Создаем объект дисплея
+LiquidCrystal_I2C lcd(DISPLAY_ADDRESS, DISPLAY_COLUMNS, DISPLAY_ROWS);  // Создаем объект дисплея
 
 // ===== НАСТРОЙКА =====
 void setup() {
@@ -57,34 +57,31 @@ void loop() {
     // Измерение температуры с датчика
     sensors.requestTemperatures();
     float temperature = sensors.getTempCByIndex(0);
-    
-    if (temperature == DEVICE_DISCONNECTED_C ||
-    temperature > TEMP_MAX_REASONABLE || 
-    temperature < TEMP_MIN_REASONABLE) {
 
-      sensorErrorCount++;
-
-      if (sensorErrorCount >= MAX_SENSOR_ERRORS) {
-        sensorError = true;
-        emergencyShutdown();
-        return;
-      }
-    } else {
-      sensorErrorCount = 0;
-      sensorError = false;
+    #ifdef ENABLE_TEMPERATURE_VALIDATION
     
-    // Накопление данных для усреднения
+    // Проверка температурных данных
+    if (checkTemperatureValidity(temperature)) {
+      // Данные достоверны - обрабатываем как обычно
+      tempSum += temperature;
+      sampleCount++;
+    };
+
+    #else
+    
+    // Обработка без проверок
     tempSum += temperature;
     sampleCount++;
 
-    // Когда набрали 5 измерений - вычисляем среднее
-    if (sampleCount >= 5) {
-      smoothedTemperature = tempSum / 5;
-      tempSum = 0;
-      sampleCount = 0;
+    #endif
+
+      // Когда набрали 5 измерений - вычисляем среднее
+      if (sampleCount >= 5) {
+        smoothedTemperature = tempSum / 5;
+        tempSum = 0;
+        sampleCount = 0;
       }
     }
-  }
   // 2. ОСНОВНОЕ УПРАВЛЕНИЕ ВЕНТИЛЯТОРОМ (каждые 1000мс)
   if ((unsigned long)(millis() - previousTempReadTime) >= TEMP_READ_INTERVAL) {
     previousTempReadTime = millis();
@@ -142,21 +139,44 @@ void controlFan(float temperature) {
 }
 
 // ===== ФУНКЦИЯ ПРЕРЫВАНИЯ РАБОТЫ ВЕНТИЛЯТОРА =====
-void emergencyShutdown() {
+void emergencyShutdown(const char* reason) {
   // Выключаем все системы
   digitalWrite(FAN_PIN, LOW);
   digitalWrite(LED_PIN_GREEN, LOW);
 
   // Выводим сообщение об ошибке на дисплей
   lcd.setCursor(0, 0);
-  lcd.print("SENSOR ERROR!");
-  lcd.print("   ");
+  lcd.print("                ");
+  lcd.print(reason);
 
   // Бесконечный цикл - система остановлена
-  while(true) {
+  while (true) {
     digitalWrite(LED_PIN_RED, HIGH);
     delay(BLINK_INTERVAL);
     digitalWrite(LED_PIN_RED, LOW);
     delay(BLINK_INTERVAL);
   }
 }
+
+#ifdef ENABLE_TEMPERATURE_VALIDATION
+/*
+Функция проверяет измерительные данные датчика
+и в случае некорректных показателей
+приостанавливает работу программы
+*/
+bool checkTemperatureValidity(float temperature) {
+  if (temperature == DEVICE_DISCONNECTED_C || temperature > TEMP_MAX_REASONABLE || temperature < TEMP_MIN_REASONABLE) {
+
+    sensorErrorCount++;
+
+    if (sensorErrorCount >= MAX_SENSOR_ERRORS) {
+      emergencyShutdown("SENSOR ERROR");
+      return false;  // Критическая ошибка, приостанавливаем программу
+    }
+    return false;  // Временная ошибка, пропуск измерения
+  } else {
+    sensorErrorCount = 0;  // Сброс счетчика при успешных измерениях
+    return true;  // Данные достоверны
+  }
+}
+#endif
