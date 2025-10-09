@@ -17,6 +17,8 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);  // Адрес обычно 0x27 или 0x3F
 // Температурные пороги (в °C)
 const float TEMP_THRESHOLD_ON = 30.0;   // Включение вентилятора
 const float TEMP_THRESHOLD_OFF = 28.0;  // Выключение вентилятора (гистерезис)
+const float TEMP_MAX_REASONABLE = 80.0; // Максимум для помещения
+const float TEMP_MIN_REASONABLE = -10.0;// Минимум для помещения
 
 // Интервалы времени (в миллисекундах)
 const unsigned long TEMP_READ_INTERVAL = 1000;  // Основное измерение температуры
@@ -34,8 +36,15 @@ bool fanState = false;          // Текущее состояние венти�
 int sampleCount = 0;            // Счетчик измерений для усреднения
 float tempSum = 0;              // Сумма температур для усреднения
 
+// Проверка на сбои датчика
+bool sensorError = false;
+int sensorErrorCount = 0;
+const int MAX_SENSOR_ERRORS = 10; // Число ошибок, после которого прерывается система
+const int BLINK_INTERVAL = 500;
+
 // ===== НАСТРОЙКА =====
 void setup() {
+
   sensors.begin();            // Включить датчик температуры
   sensors.setResolution(10);  // Погрешность в 0.25°C, частота 187.5 ms
 
@@ -77,7 +86,22 @@ void loop() {
     // Измерение температуры с датчика
     sensors.requestTemperatures();
     float temperature = sensors.getTempCByIndex(0);
+    
+    if (temperature == DEVICE_DISCONNECTED_C ||
+    temperature > TEMP_MAX_REASONABLE || 
+    temperature < TEMP_MIN_REASONABLE) {
 
+      sensorErrorCount++;
+
+      if (sensorErrorCount >= MAX_SENSOR_ERRORS) {
+        sensorError = true;
+        emergencyShutdown();
+        return;
+      }
+    } else {
+      sensorErrorCount = 0;
+      sensorError = false;
+    
     // Накопление данных для усреднения
     tempSum += temperature;
     sampleCount++;
@@ -87,6 +111,7 @@ void loop() {
       smoothedTemperature = tempSum / 5;
       tempSum = 0;
       sampleCount = 0;
+      }
     }
   }
   // 2. ОСНОВНОЕ УПРАВЛЕНИЕ ВЕНТИЛЯТОРОМ (каждые 1000мс)
@@ -142,5 +167,25 @@ void controlFan(float temperature) {
     digitalWrite(FAN_PIN, fanState ? HIGH : LOW);
     digitalWrite(LED_PIN_GREEN, fanState ? HIGH : LOW);
     digitalWrite(LED_PIN_RED, fanState ? LOW : HIGH);
+  }
+}
+
+// ===== ФУНКЦИЯ ПРЕРЫВАНИЯ РАБОТЫ ВЕНТИЛЯТОРА =====
+void emergencyShutdown() {
+  // Выключаем все системы
+  digitalWrite(FAN_PIN, LOW);
+  digitalWrite(LED_PIN_GREEN, LOW);
+
+  // Выводим сообщение об ошибке на дисплей
+  lcd.setCursor(0, 0);
+  lcd.print("SENSOR ERROR!");
+  lcd.print("   ");
+
+  // Бесконечный цикл - система остановлена
+  while(true) {
+    digitalWrite(LED_PIN_RED, HIGH);
+    delay(BLINK_INTERVAL);
+    digitalWrite(LED_PIN_RED, LOW);
+    delay(BLINK_INTERVAL);
   }
 }
